@@ -72,8 +72,8 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          scp -i /tmp/chooseMart.pem -r . ${{ secrets.EC2_HOST }}:/home/ubuntu/myproject
-          ssh -i /tmp/chooseMart.pem ${{ secrets.EC2_HOST }} 'cd /home/ubuntu/myproject && docker-compose down && docker-compose up -d'
+          scp -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem -r . ${{ secrets.EC2_HOST }}:/home/ubuntu/myproject
+          ssh -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem ${{ secrets.EC2_HOST }} 'cd /home/ubuntu/myproject && docker-compose down && docker-compose up -d'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
