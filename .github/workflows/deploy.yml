@@ -44,12 +44,9 @@ jobs:
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/chooseMart.pem
           chmod 600 /tmp/chooseMart.pem
-      
-      - name: Verify SSH Key
-        run: |
           file /tmp/chooseMart.pem
-          cat /tmp/chooseMart.pem
-      
+          head -n 20 /tmp/chooseMart.pem
+
       - name: Deploy to EC2
         run: |
           scp -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem -r . ${{ secrets.EC2_HOST }}:/home/ubuntu/myproject
