@@ -38,6 +38,9 @@ jobs:
           . venv/bin/activate
           python manage.py collectstatic --noinput
 
+      - name: List static directory
+        run: ls -la static
+
       - name: Upload static files
         uses: actions/upload-artifact@v4
         with:
@@ -58,6 +61,15 @@ jobs:
 
       - name: List /tmp directory
         run: ls -la /tmp
+
+      - name: Download static files
+        uses: actions/download-artifact@v4
+        with:
+          name: static-files
+          path: static/
+
+      - name: List static directory
+        run: ls -la static
 
       - name: Sync static files to S3
         run: |
