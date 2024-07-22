@@ -1,3 +1,66 @@
+# name: Build & Deploy Django
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# env:
+#   CI: false
+
+# jobs:
+#   build:
+#     name: Build
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v2
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.8'
+
+#       - name: Install dependencies
+#         run: |
+#           python -m venv venv
+#           . venv/bin/activate
+#           pip install -r requirements.txt
+
+#       - name: Run tests
+#         run: |
+#           . venv/bin/activate
+#           python manage.py test
+
+#   deploy:
+#     name: Deploy
+#     needs: build
+#     runs-on: ubuntu-latest
+#     if: github.ref == 'refs/heads/main'
+
+#     steps:
+#       - name: Decode and save SSH key
+#         run: |
+#           echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/chooseMart.pem
+#           chmod 600 /tmp/chooseMart.pem
+      
+#       - name: Verify SSH Key
+#         run: |
+#           file /tmp/chooseMart.pem
+#           cat /tmp/chooseMart.pem
+      
+#       - name: Deploy to EC2
+#         run: |
+#           scp -vvv -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem -r . ${{ secrets.EC2_HOST }}:/home/ubuntu/myproject
+#           ssh -vvv -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem ${{ secrets.EC2_HOST }} 'cd /home/ubuntu/myproject && docker-compose down && docker-compose up -d'
+#         env:
+#           CI: false
+#           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+
 name: Build & Deploy Django
 
 on:
@@ -44,16 +107,29 @@ jobs:
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/chooseMart.pem
           chmod 600 /tmp/chooseMart.pem
-      
+
       - name: Verify SSH Key
         run: |
           file /tmp/chooseMart.pem
           cat /tmp/chooseMart.pem
-      
-      - name: Deploy to EC2
+
+      - name: Copy files to EC2
         run: |
-          scp -vvv -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem -r . ${{ secrets.EC2_HOST }}:/home/ubuntu/myproject
-          ssh -vvv -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem ${{ secrets.EC2_HOST }} 'cd /home/ubuntu/myproject && docker-compose down && docker-compose up -d'
+          scp -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem -r . ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/myproject
+        env:
+          CI: false
+
+      - name: Deploy on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu/myproject
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
+            python manage.py migrate
+            python manage.py collectstatic --noinput
+            sudo systemctl restart gunicorn
+          EOF
         env:
           CI: false
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
