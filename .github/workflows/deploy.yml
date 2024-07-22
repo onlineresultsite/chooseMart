@@ -51,11 +51,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Download static files
-        uses: actions/download-artifact@v4
-        with:
-          name: static-files
-          path: static/
+      - name: Decode and save SSH key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/chooseMart.pem
+          chmod 600 /tmp/chooseMart.pem
+
+      - name: List /tmp directory
+        run: ls -la /tmp
 
       - name: Sync static files to S3
         run: |
@@ -65,16 +67,12 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Decode and save SSH key
-        run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > /tmp/chooseMart.pem
-          chmod 600 /tmp/chooseMart.pem
-
       - name: Deploy to EC2
         run: |
           scp -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem -r . ${{ secrets.EC2_HOST }}:/home/ubuntu/myproject
           ssh -o StrictHostKeyChecking=no -i /tmp/chooseMart.pem ${{ secrets.EC2_HOST }} 'cd /home/ubuntu/myproject && docker-compose down && docker-compose up -d'
         env:
+          CI: false
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
